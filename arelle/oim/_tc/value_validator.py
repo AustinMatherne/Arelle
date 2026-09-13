@@ -49,13 +49,14 @@ from arelle.oim.const import (
     SQNAME_PATTERN,
     UNIT_PATTERN,
     UNIT_QNAME_SUBSTITUTION_CHAR,
-    XSD_TZ_PATTERN,
 )
 from arelle.XmlUtil import collapseWhitespace, replaceWhitespace
 from arelle.XmlValidate import XmlValidationResult, XsdPattern, validateFacetValueString, validateValueString
 
 # TC prohibits uppercase characters in core language.
 _TC_CORE_LANGUAGE_PATTERN = regex.compile(r"[a-z]{1,8}(-[a-z0-9]{1,8})*$")
+# The colon is mandatory so that a negative year such as -2024 is not taken for an offset.
+_XSD_TIME_ZONE_PATTERN = regex.compile(r"(?:Z|[+-](?:0[0-9]|1[0-3]):[0-5][0-9]|[+-]14:00)$")
 
 
 
@@ -275,7 +276,7 @@ class ValueConstraintValidator:
         if self._constraint.type == CORE_PERIOD:
             return self._period_timezone_matches(value)
         if self._effective_lexical_type in OPTIONALLY_TIME_ZONED_TYPES:
-            has_tz = XSD_TZ_PATTERN.search(value) is not None
+            has_tz = _XSD_TIME_ZONE_PATTERN.search(value) is not None
             return self._constraint.time_zone == has_tz
         return True
 
