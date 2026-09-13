@@ -3,7 +3,9 @@ See COPYRIGHT.md for copyright information.
 """
 from __future__ import annotations
 
+import os
 from collections import defaultdict
+from collections.abc import Iterator
 from typing import TYPE_CHECKING
 
 import regex as re
@@ -14,6 +16,11 @@ from arelle.ModelDtsObject import ModelResource
 from arelle.ModelObject import ModelObject
 from arelle.ModelXbrl import ModelXbrl
 from arelle.oim._tc.metadata.validate import TCMetadataValidator
+from arelle.oim._tc.report.common import SEVERITY_WARNING
+from arelle.oim._tc.report.validate import TCReportValidator
+from arelle.oim.csv.context import XbrlCsvLoadingContext
+from arelle.oim.csv.metadata.model import XbrlCsvTable
+from arelle.oim.Load import CSV_FACTS_FILE, OIMException, openCsvReader
 from arelle.typing import TypeGetText
 from arelle.XmlValidateConst import VALID
 
@@ -26,18 +33,77 @@ precisionZeroPattern = re.compile(r"^\s*0+\s*$")
 
 
 def validateTableConstraints(modelXbrl: ModelXbrl) -> None:
-    """Runs xBRL-CSV Table Constraints validation for a loaded xBRL-CSV report."""
+    """Runs xBRL-CSV Table Constraints validation for an xBRL-CSV report.
+
+    Report validation only runs when the metadata is valid, since constraints defined
+    by inconsistent metadata have no reliable meaning.
+    """
     csvContext = modelXbrl.xbrlCsvLoadingContext
     if csvContext is None or csvContext.tc_metadata is None:
         return
-    tcValidator = TCMetadataValidator(csvContext.metadata, csvContext.tc_metadata)
-    for tcError in tcValidator.validate():
+    hasMetadataErrors = False
+    tcMetadataValidator = TCMetadataValidator(csvContext.metadata, csvContext.tc_metadata)
+    for tcMetadataError in tcMetadataValidator.validate():
+        hasMetadataErrors = True
         modelXbrl.error(
-            tcError.code,
+            tcMetadataError.code,
             _("Invalid table constraints metadata: %(error)s"),
             modelObject=modelXbrl,
-            error=str(tcError),
+            error=str(tcMetadataError),
         )
+    if hasMetadataErrors:
+        return
+    tcReportValidator = TCReportValidator(
+        csvContext.metadata,
+        csvContext.tc_metadata,
+        lambda tableId, table: _tableConstraintsTableRows(modelXbrl, csvContext, tableId, table),
+        modelXbrl.modelManager.cntlr.showStatus,
+    )
+    try:
+        for tcReportError in tcReportValidator.validate():
+            modelXbrl.log(
+                "WARNING" if tcReportError.severity == SEVERITY_WARNING else "ERROR",
+                tcReportError.code,
+                _("Table constraints violation: %(error)s"),
+                modelObject=modelXbrl,
+                error=str(tcReportError),
+            )
+    except OIMException as ex:
+        modelXbrl.error(ex.code, ex.message, modelObject=modelXbrl, **ex.msgArgs)
+    except UnicodeDecodeError as ex:
+        modelXbrl.error(
+            "xbrlce:invalidCSVFileFormat",
+            _("CSV file MUST use utf-8 encoding: %(error)s"),
+            modelObject=modelXbrl,
+            error=str(ex),
+        )
+
+
+def _tableConstraintsTableRows(
+    modelXbrl: ModelXbrl, csvContext: XbrlCsvLoadingContext, tableId: str, table: XbrlCsvTable
+) -> Iterator[list[str]] | None:
+    """Opens the CSV file of a table for table constraints validation.
+
+    Workbook tables are not validated. A missing file is reported when the report
+    was not loaded, since the loader reports it otherwise.
+    """
+    metadataPath = csvContext.metadata_path or ""
+    tableUrl = table.url
+    isWorkbookTable = "#" in tableUrl or tableUrl.endswith((".xlsx", ".xls"))
+    if isWorkbookTable or (metadataPath.endswith((".xlsx", ".xls")) and ".csv" not in tableUrl):
+        return None
+    tablePath = os.path.normpath(os.path.join(os.path.dirname(metadataPath), tableUrl))
+    if not modelXbrl.fileSource.exists(tablePath):
+        if modelXbrl.tableConstraintsSkipLoading and not table.optional:
+            modelXbrl.error(
+                "xbrlce:missingRequiredCSVFile",
+                _("Table %(table)s missing, url: %(url)s"),
+                modelObject=modelXbrl,
+                table=tableId,
+                url=tableUrl,
+            )
+        return None
+    return openCsvReader(modelXbrl.fileSource, tablePath, CSV_FACTS_FILE)
 
 
 def validateOIM(modelXbrl: ModelXbrl) -> None:

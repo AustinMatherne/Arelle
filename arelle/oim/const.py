@@ -42,6 +42,7 @@ UNIT_PATTERN = regex.compile(
 )
 
 XBRLCE_INVALID_IDENTIFIER = "xbrlce:invalidIdentifier"
+XBRLCE_UNKNOWN_SPECIAL_VALUE = "xbrlce:unknownSpecialValue"
 
 _YEAR = r"(?!0000)[0-9]{4}"
 _DATE = rf"{_YEAR}-[0-9]{{2}}-[0-9]{{2}}"

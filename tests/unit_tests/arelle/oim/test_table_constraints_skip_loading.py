@@ -68,9 +68,11 @@ _JSON_METADATA = {
 }
 
 
-def _run(tmp_path: Path, metadata: dict[str, Any], table_constraints_skip_loading: bool) -> ModelXbrl:
+def _run(
+    tmp_path: Path, metadata: dict[str, Any], table_constraints_skip_loading: bool, csv: str = _CSV
+) -> ModelXbrl:
     (tmp_path / "taxonomy.xsd").write_text(_TAXONOMY, encoding="utf-8")
-    (tmp_path / "data.csv").write_text(_CSV, encoding="utf-8")
+    (tmp_path / "data.csv").write_text(csv, encoding="utf-8")
     metadata_path = tmp_path / "report.json"
     metadata_path.write_text(json.dumps(metadata), encoding="utf-8")
     with Session() as session:
@@ -106,6 +108,12 @@ def test_table_constraints_skip_loading_skips_taxonomy_and_facts(tmp_path: Path)
 def test_table_constraints_skip_loading_valid_report_has_no_errors(tmp_path: Path) -> None:
     model = _run(tmp_path, _csv_metadata("xs:integer"), table_constraints_skip_loading=True)
     assert model.errors == []
+
+
+@pytest.mark.parametrize("table_constraints_skip_loading", [False, True])
+def test_report_validation_runs_in_both_modes(tmp_path: Path, table_constraints_skip_loading: bool) -> None:
+    model = _run(tmp_path, _csv_metadata("xs:integer"), table_constraints_skip_loading, csv="id,value\nx,ten\n")
+    assert "tcre:invalidValue" in model.errors
 
 
 @pytest.mark.parametrize(
