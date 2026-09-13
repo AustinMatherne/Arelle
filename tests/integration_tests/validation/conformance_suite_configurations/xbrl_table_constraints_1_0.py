@@ -46,14 +46,8 @@ config = ConformanceSuiteConfig(
         "720-tc-report-processor/index-tc-report-table.xml:V-61": {
             "tcme:illegalUniqueKeyOrder": 1,
         },
-        # Test cases with valid XML dates beyond the year range supported by Arelle (datetime MINYEAR and MAXYEAR).
+        # Period enumeration values with dates beyond the year range of the xBRL-CSV period patterns.
         "generated/facets-with-invalid-values/index-tc-facets-with-invalid-values.xml:V-GEN-facetValue-period-enumerationValues-valid": {
-            "tcme:illegalConstraint": 1,
-        },
-        "generated/facets-with-invalid-values/index-tc-facets-with-invalid-values.xml:V-GEN-facetValue-xs_date-enumerationValues-valid": {
-            "tcme:illegalConstraint": 1,
-        },
-        "generated/facets-with-invalid-values/index-tc-facets-with-invalid-values.xml:V-GEN-facetValue-xs_dateTime-enumerationValues-valid": {
             "tcme:illegalConstraint": 1,
         },
     }.items()},
