@@ -83,6 +83,62 @@ class TestValidateDate:
         assert _validator(tc_types.DATE).validate(value) is expected
 
 
+class TestValidateWideYearDates:
+    @pytest.mark.parametrize(
+        "constraint_type, value, expected",
+        [
+            (tc_types.DATE, "12024-01-01", True),
+            (tc_types.DATE, "-12024-01-01", True),
+            (tc_types.DATE, " 2024-01-01 ", True),
+            (tc_types.DATE, "+12024-01-01", False),
+            (tc_types.DATE, "0000-01-01", False),
+            (tc_types.DATE_TIME, "-12024-01-01T00:00:00Z", True),
+            (tc_types.DATE_TIME, "2024-01-01T24:00:00", True),
+            (tc_types.DATE_TIME, "2024-01-01T24:00:01", False),
+            (tc_types.DATE_TIME, "2016-12-31T23:59:60Z", True),
+            (tc_types.DATE_TIME, "2016-12-31T23:59:61Z", False),
+            (tc_types.G_YEAR, "-12024", True),
+            (tc_types.G_YEAR, "12024Z", True),
+            (tc_types.G_YEAR_MONTH, "-12024-12", True),
+            (tc_types.G_YEAR_MONTH, "12024-13", False),
+        ],
+    )
+    def test_wide_year_validation(self, constraint_type: QName, value: str, expected: bool) -> None:
+        assert _validator(constraint_type).validate(value) is expected
+
+    @pytest.mark.parametrize(
+        "kwargs, value, expected",
+        [
+            ({"min_inclusive": "12024-01-01"}, "12024-01-01", True),
+            ({"min_inclusive": "12024-01-01"}, "12023-12-31", False),
+            ({"min_exclusive": "-12024-01-01"}, "-12024-01-01", False),
+            ({"min_exclusive": "-12024-01-01"}, "-12023-01-01", True),
+            ({"max_inclusive": "2024-01-01Z"}, "2024-01-01+01:00", True),
+            ({"max_inclusive": "2024-01-01Z"}, "2024-01-01-01:00", False),
+            ({"max_exclusive": "2024-01-01Z"}, "2024-01-01", False),
+        ],
+    )
+    def test_wide_year_bounds(self, kwargs: dict[str, str], value: str, expected: bool) -> None:
+        assert _validator(tc_types.DATE, **kwargs).validate(value) is expected
+
+    @pytest.mark.parametrize(
+        "constraint_type, members, value, expected",
+        [
+            (tc_types.DATE, {"12024-01-01", "-12024-01-01"}, "-12024-01-01", True),
+            (tc_types.DATE, {"12024-01-01"}, "12024-01-02", False),
+            (tc_types.DATE_TIME, {"2024-01-02T00:00:00"}, "2024-01-01T24:00:00", True),
+            (tc_types.DATE_TIME, {"2024-01-01T00:00:00Z"}, "2024-01-01T01:00:00+01:00", True),
+            (tc_types.DATE_TIME, {"2024-01-01T00:00:00Z"}, "2024-01-01T00:00:00", False),
+            (tc_types.G_YEAR, {"-12024"}, "-12024", True),
+            (tc_types.G_YEAR, {"-12024"}, "12024", False),
+        ],
+    )
+    def test_wide_year_enumeration(
+        self, constraint_type: QName, members: set[str], value: str, expected: bool
+    ) -> None:
+        assert _validator(constraint_type, enumeration_values=frozenset(members)).validate(value) is expected
+
+
 class TestValidateGMonthDay:
     @pytest.mark.parametrize(
         "value, expected",
