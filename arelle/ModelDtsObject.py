@@ -968,7 +968,7 @@ class ModelConcept(ModelNamableTerm, ModelParticle):
         else:
             _labelProperty = ("label", _labelDefault)
 
-        _refT = tuple((self.modelXbrl.roleTypeDefinition(_ref.role, _lang), " ",  # type: ignore[union-attr]
+        _refT = tuple((self.modelXbrl.roleTypeDefinition(_ref.role or XbrlConst.standardReference, _lang), " ",  # type: ignore[union-attr]
                        tuple((_refPart.localName, _refPart.stringValue.strip())
                              for _refPart in _ref.iterchildren()))  # type: ignore[union-attr]
                       for _refRel in sorted(self.modelXbrl.relationshipSet(XbrlConst.conceptReference).fromModelObject(self),
