@@ -207,7 +207,7 @@ class ViewRelationshipSet(ViewFile.View):
             isRelation = isinstance(modelObject, ModelRelationship)
             childRelationshipSet = relationshipSet
             text: str
-            attr: dict[str, str]
+            attr: dict[str, str | None]
             xmlRowElementName: str
             if isinstance(concept, ModelDtsObject.ModelConcept):
                 text = labelPrefix + concept.label(preferredLabel, lang=self.lang, linkroleHint=relationshipSet.linkrole)  # type: ignore[arg-type,operator]

@@ -66,8 +66,8 @@ class ValidateXbrl:
     hasExtensionPre: bool
     hasExtensionSchema: bool
     ixdsDocs: list[ModelDocument]
-    ixdsFootnotes: dict[str, ModelObject]
-    ixdsFootnotesById: dict[str, list[ModelObject]]
+    ixdsFootnotes: dict[str | None, ModelObject]
+    ixdsFootnotesById: dict[str | None, list[ModelObject]]
     ixdsHeaderCount: int
     ixdsReferences: dict[str, Any]
     ixdsRelationships: list[ModelObject]
